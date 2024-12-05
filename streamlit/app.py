@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, accuracy_score, mean_absolute_percentage_error
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.model_selection import GridSearchCV
@@ -18,7 +18,8 @@ st.set_page_config(page_title="Multi-Page Streamlit App", page_icon=":bar_chart:
 # Load the dataset locally
 @st.cache_data
 def load_data():
-    return pd.read_csv("Air_Quality_Beijing.csv")
+  url = "https://raw.githubusercontent.com/Allenstrange/CMP-Assessment/refs/heads/main/Air_Quality_Beijing.csv"
+  return pd.read_csv(url)
 
 # Load data into session state
 if 'data' not in st.session_state:
