@@ -35,6 +35,7 @@ def data_loading():
         # Data preview
         num_rows = st.slider("Select Number of Rows to Preview", 1, 100, 10)
         st.write("### Data Preview:")
+        st.write("This is a dataset about pollutants")
         st.dataframe(data.head(num_rows))
 
         # Descriptive Statistics Options
