@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.io as pio
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
@@ -12,10 +13,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.model_selection import GridSearchCV
 
-st.set_page_config(page_title="Enhanced Air Quality Analysis", page_icon=":bar_chart:")
+# Configure the page
+st.set_page_config(page_title="Multi-Page Streamlit App", page_icon=":bar_chart:")
 
-# Load the dataset
-@st.cache_data
+# Load the dataset locally
+@st.cache_data  # 🗂️ Cache the dataset to improve app performance
 def load_data():
     url = "https://raw.githubusercontent.com/Allenstrange/CMP-Assessment/refs/heads/main/Air_Quality_Beijing.csv"
     return pd.read_csv(url)
@@ -24,57 +26,60 @@ def load_data():
 if 'data' not in st.session_state:
     st.session_state['data'] = load_data()
 
+# 📄 Overview Section
+st.sidebar.title("Dataset Overview")
+st.sidebar.write(
+    "### Air Quality in Beijing 🌫️\n"
+    "This dataset captures air quality measurements in Beijing, including various pollutants and weather conditions.\n"
+    "The goal is to analyze pollution levels and their relationship with weather patterns to derive actionable insights."
+)
+
 # Page 1: Data Loading
+# 🛠️ Load and preview the dataset
+
 def data_loading():
-    st.title("Data Loading")
-    st.write("""
-    ### Overview
-    This page allows you to load and preview the air quality dataset. You can view basic statistics 
-    and inspect missing values in the dataset.
-    """)
+    st.title("Data Loading 🛠️")
 
     if st.session_state['data'] is not None:
         data = st.session_state['data']
 
         # Data preview
         num_rows = st.slider("Select Number of Rows to Preview", 1, 100, 10)
-        st.write("### Data Preview:")
+        st.write("### Data Preview 🔍:")
+        st.write("This is a dataset about pollutants:")
         st.dataframe(data.head(num_rows))
 
         # Descriptive Statistics Options
-        st.write("### Descriptive Statistics:")
-        if st.checkbox("Show Descriptive Statistics Table"):
+        st.write("### Descriptive Statistics 📊:")
+        show_desc_table = st.checkbox("Show Descriptive Statistics Table")
+        if show_desc_table:
             st.write(data.describe().T)
 
         # Missing Value Statistics Options
-        st.write("### Missing Values:")
-        if st.checkbox("Show Missing Values Table"):
+        st.write("### Missing Values ❓:")
+        show_missing_table = st.checkbox("Show Missing Values Table")
+        if show_missing_table:
+            # Calculate missing values and percentages
             missing_values = data.isnull().sum()
             missing_percentage = (data.isnull().sum() / len(data)) * 100
+            # Create a DataFrame for display
             missing_df = pd.DataFrame({'Missing Values': missing_values, 'Percentage': missing_percentage})
-            st.table(missing_df)
+            st.table(missing_df)  # Display as a table
 
-        # Dataset Export
-        st.write("### Export Dataset")
-        if st.button("Download Dataset"):
-            st.download_button("Download CSV", data.to_csv(index=False), "air_quality.csv", "text/csv")
     else:
         st.write("Data could not be loaded.")
 
 # Page 2: Data Preprocessing
+# 🧹 Clean and preprocess the data
+
 def data_preprocessing():
-    st.title("Data Preprocessing")
-    st.write("""
-    ### Overview
-    This page provides tools to clean and preprocess the dataset, including handling missing values, 
-    dropping unnecessary columns, and feature engineering.
-    """)
+    st.title("Data Preprocessing 🧹")
 
     if st.session_state['data'] is not None:
         data = st.session_state['data']
 
         # Section 1: Handling Missing Values
-        st.header("Handling Missing Values")
+        st.header("Handling Missing Values ❓")
         imputation_method = st.radio("Choose an imputation method:", ["Mean", "Median", "Mode"])
         columns_to_impute = st.multiselect("Select columns to impute:", data.columns)
 
@@ -89,15 +94,37 @@ def data_preprocessing():
             st.success("Missing values imputed successfully.")
 
         # Section 2: Dropping Columns
-        st.header("Dropping Columns")
+        st.header("Dropping Columns 🗑️")
         columns_to_drop = st.multiselect("Select columns to drop:", data.columns)
 
         if st.button("Drop Selected Columns"):
             data.drop(columns=columns_to_drop, inplace=True)
             st.success("Selected columns dropped successfully.")
 
-        # Section 3: Feature Engineering
-        st.header("Feature Engineering")
+        # Data Exploration: Pollutant and Weather Distributions
+        st.write("### Data Exploration 📈")
+        st.write(
+            "This data exploration aims to analyze feature distributions and identify skewness to inform the imputation of missing values."
+        )
+
+        # Select columns for histograms
+        selected_columns = st.multiselect(
+            "Select columns to display histograms",
+            data.columns,
+            default=['PM2.5', 'PM10', 'TEMP', 'PRES']  # Default to some columns
+        )
+
+        if selected_columns:
+            fig, axes = plt.subplots(len(selected_columns), 1, figsize=(10, 5 * len(selected_columns)))
+            if len(selected_columns) == 1:
+                axes = [axes]
+            for ax, col in zip(axes, selected_columns):
+                data[col].hist(ax=ax, bins=30)
+                ax.set_title(f"Distribution of {col}")
+            st.pyplot(fig)
+
+        # Feature Engineering Section
+        st.header("Feature Engineering 🛠️")
         if st.checkbox("Add Date Column"):
             data['Date'] = pd.to_datetime(data[['year', 'month', 'day', 'hour']])
             st.success("Date column added successfully.")
@@ -106,8 +133,57 @@ def data_preprocessing():
             data['Season'] = data['month'].apply(lambda x: 'Spring' if 3 <= x <= 5 else 'Summer' if 6 <= x <= 8 else 'Autumn' if 9 <= x <= 11 else 'Winter')
             st.success("Season column added successfully.")
 
+        if st.checkbox("Add AQI Column"):
+            def calculate_aqi(row):
+                breakpoints = {
+                    'PM2.5': [(0, 35, 0, 50), (36, 75, 51, 100), (76, 115, 101, 150), (116, 150, 151, 200), (151, 250, 201, 300), (251, 500, 301, 500)],
+                    'PM10': [(0, 50, 0, 50), (51, 150, 51, 100), (151, 250, 101, 150), (251, 350, 151, 200), (351, 420, 201, 300), (421, 600, 301, 500)],
+                    'SO2': [(0, 150, 0, 50), (151, 500, 51, 100), (501, 650, 101, 150), (651, 800, 151, 200), (801, 1600, 201, 300), (1601, 2100, 301, 500)],
+                    'NO2': [(0, 40, 0, 50), (41, 80, 51, 100), (81, 180, 101, 150), (181, 280, 151, 200), (281, 560, 201, 300), (561, 940, 301, 500)],
+                    'CO': [(0, 2, 0, 50), (2.1, 4, 51, 100), (4.1, 14, 101, 150), (14.1, 24, 151, 200), (24.1, 36, 201, 300), (36.1, 60, 301, 500)],
+                    'O3': [(0, 180, 0, 50), (181, 240, 51, 100), (241, 340, 101, 150), (341, 420, 151, 200), (421, 500, 201, 300), (501, 800, 301, 500)]
+                }
+
+                def get_aqi(concentration, breakpoints):
+                    for bp in breakpoints:
+                        if bp[0] <= concentration <= bp[1]:
+                            return int((bp[2] + bp[3]) / 2)
+                    return 0
+
+                aqi_values = {
+                    'PM2.5': get_aqi(row['PM2.5'], breakpoints['PM2.5']),
+                    'PM10': get_aqi(row['PM10'], breakpoints['PM10']),
+                    'SO2': get_aqi(row['SO2'], breakpoints['SO2']),
+                    'NO2': get_aqi(row['NO2'], breakpoints['NO2']),
+                    'CO': get_aqi(row['CO'], breakpoints['CO']),
+                    'O3': get_aqi(row['O3'], breakpoints['O3']),
+                }
+
+                return max(aqi_values.values())
+
+            data['AQI'] = data.apply(calculate_aqi, axis=1)
+            st.success("AQI column added successfully.")
+
+        if st.checkbox("Add AQI_Bucket Column"):
+            def get_aqi_bucket(aqi):
+                if aqi <= 50:
+                    return 'Good'
+                elif aqi <= 100:
+                    return 'Moderate'
+                elif aqi <= 150:
+                    return 'Unhealthy for Sensitive Groups'
+                elif aqi <= 200:
+                    return 'Unhealthy'
+                elif aqi <= 300:
+                    return 'Very Unhealthy'
+                else:
+                    return 'Hazardous'
+
+            data['AQI_Bucket'] = data['AQI'].apply(get_aqi_bucket)
+            st.success("AQI_Bucket column added successfully.")
+
         # Processed Data Section
-        st.header("Processed Data")
+        st.header("Processed Data 📑")
         if st.button("Show Processed Data"):
             st.dataframe(data)
 
@@ -115,22 +191,36 @@ def data_preprocessing():
         st.write("Data could not be loaded.")
 
 # Page 3: Data Visualization
+# 📊 Visualize the processed data
+
 def data_visualization():
-    st.title("Data Visualization")
-    st.write("""
-    ### Overview
-    This page provides interactive visualizations to explore patterns and distributions in the dataset.
-    """)
+    st.title("Data Visualization 📊")
 
     if st.session_state['data'] is not None:
         data = st.session_state['data']
 
-        # Visualization: Histogram of AQI Distribution
+        st.write("### Visualizations 🖼️")
+
+        # Visualization 1: Stacked Bar Chart of Average Pollution Levels by Station
+        if st.checkbox("Show Average Pollution Levels by Station"):
+            station_stats = data.groupby('station')[['PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3']].mean().reset_index()
+            station_stats_melted = pd.melt(station_stats, id_vars=['station'], value_vars=['PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3'], var_name='Pollutant', value_name='Average Concentration')
+            fig = px.bar(station_stats_melted, x='station', y='Average Concentration', color='Pollutant', barmode='stack', title='Average Pollution Levels by Station')
+            st.plotly_chart(fig)
+
+        # Visualization 2: Bar Chart of Average Concentration of Each Pollutant
+        if st.checkbox("Show Average Concentration of Each Pollutant"):
+            pollutants = ['PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3']
+            mean_pollutants = data[pollutants].mean()
+            fig = px.bar(x=pollutants, y=mean_pollutants, title='Average Concentration of Each Pollutant', labels={'x': 'Pollutant', 'y': 'Average Concentration'})
+            st.plotly_chart(fig)
+
+        # Visualization 3: Histogram of AQI Distribution
         if st.checkbox("Show AQI Distribution"):
             fig = px.histogram(data, x='AQI_Bucket', nbins=30, title='AQI Distribution', marginal='box')
             st.plotly_chart(fig)
 
-        # Visualization: Heatmap of Correlation Matrix
+        # Visualization 4: Heatmap of Correlation Matrix
         if st.checkbox("Show Correlation Matrix Heatmap"):
             corr_cols = ['TEMP', 'PRES', 'DEWP', 'RAIN', 'WSPM', 'PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3', 'AQI']
             corr_matrix = data[corr_cols].corr()
@@ -139,29 +229,39 @@ def data_visualization():
             fig.update_layout(title='Correlation Matrix of Weather Conditions and Pollutants/AQI')
             st.plotly_chart(fig)
 
-        # Visualization: Parallel Coordinates Plot
-        if st.checkbox("Show Parallel Coordinates Plot"):
+        # Visualization 5: Parallel Coordinates Plot of Weather and AQI
+        if st.checkbox("Show Parallel Coordinates Plot of Weather and AQI"):
             AQI_Bucket_mapping = {'Good': 1, 'Moderate': 2, 'Unhealthy for Sensitive Groups': 3, 'Unhealthy': 4, 'Very Unhealthy': 5, 'Hazardous': 6}
             data['AQI_Bucket_Num'] = data['AQI_Bucket'].map(AQI_Bucket_mapping)
             fig = px.parallel_coordinates(data, dimensions=['TEMP', 'PRES', 'DEWP', 'RAIN', 'WSPM', 'AQI'], color='AQI_Bucket_Num', color_continuous_scale=px.colors.diverging.Tealrose, title='Parallel Coordinates Plot of Weather and AQI')
+            fig.update_layout(coloraxis_colorbar=dict(tickvals=list(AQI_Bucket_mapping.values()), ticktext=list(AQI_Bucket_mapping.keys())))
             st.plotly_chart(fig)
 
     else:
         st.write("Data could not be loaded.")
 
-# Page 4: Data Modeling and Evaluation
+# Page 4: Data Modeling
+# 🤖 Build predictive models
+
 def data_modeling():
-    st.title("Data Modeling and Evaluation")
-    st.write("""
-    ### Overview
-    This page allows you to build and evaluate predictive models for air quality analysis.
-    """)
+    st.title("Data Modeling and Evaluation 🤖")
 
     if st.session_state['data'] is not None:
         data = st.session_state['data']
 
         # Feature Selection Section
-        st.header("Feature Selection")
+        st.header("Feature Selection 🔬")
+        st.write("Select dependent and independent variables for modeling.")
+
+        # Correlation Heatmap
+        if st.checkbox("Show Correlation Heatmap"):
+            corr_cols = data.select_dtypes(include=[np.number]).columns
+            corr_matrix = data[corr_cols].corr()
+            fig, ax = plt.subplots(figsize=(10, 8))
+            sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f", ax=ax)
+            st.pyplot(fig)
+
+        # Select Dependent and Independent Variables
         independent_vars = st.multiselect("Select Independent Variables:", options=data.columns)
         dependent_var = st.selectbox("Select Dependent Variable:", options=data.columns)
 
@@ -169,16 +269,24 @@ def data_modeling():
             X = data[independent_vars]
             y = data[dependent_var]
 
+            # Standardization Option
+            st.header("Data Standardization ⚖️")
+            standardize = st.checkbox("Standardize Data using StandardScaler")
+
+            if standardize:
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
+
             # Train-Test Split
-            st.header("Train-Test Split")
+            st.header("Train-Test Split ✂️")
             test_size = st.slider("Select Test Size (as a percentage):", min_value=10, max_value=50, value=20, step=5)
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
 
             st.write("Training Set Size:", len(X_train))
             st.write("Testing Set Size:", len(X_test))
 
-            # Model Selection
-            st.header("Model Selection")
+            # Model Selection Section
+            st.header("Model Selection 🛠️")
 
             # Linear Regression
             if st.checkbox("Linear Regression"):
@@ -215,6 +323,20 @@ def data_modeling():
                 st.write(f"Root Mean Squared Error: {rmse_knn}")
                 st.write(f"R-squared: {r2_knn}")
                 st.write(f"Mean Absolute Error: {mae_knn}")
+
+                # Grid Search for Hyperparameter Tuning
+                if st.checkbox("Perform Grid Search for KNN"):
+                    param_grid = {
+                        'n_neighbors': range(1, 21),
+                        'weights': ['uniform', 'distance']
+                    }
+                    grid_search = GridSearchCV(KNeighborsRegressor(), param_grid, cv=5, scoring='neg_mean_squared_error')
+                    grid_search.fit(X_train, y_train)
+
+                    st.write("### Best Parameters from Grid Search:")
+                    st.write(grid_search.best_params_)
+                    st.write("Best Cross-Validated Score:", -grid_search.best_score_)
+
     else:
         st.write("Data could not be loaded.")
 
@@ -230,3 +352,4 @@ elif page == "Data Visualization":
     data_visualization()
 elif page == "Data Modeling and Evaluation":
     data_modeling()
+
