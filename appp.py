@@ -30,52 +30,50 @@ if 'data' not in st.session_state:
 # Page 1: Data Loading
 # -------------------------------------
 def data_loading():
-    st.title("Data Loading")
-    
+    st.title("Data Loading :open_file_folder:")
+
     st.markdown("""
     **Goal:** Before we dive into analysis, let’s get acquainted with the dataset.
+    
     The Beijing Air Quality dataset contains hourly readings of pollutants (like PM2.5, PM10, SO2, NO2, CO, and O3) 
     and weather-related conditions (like temperature, pressure, wind speed, etc.) across multiple monitoring stations.
     
     On this page, you can:
-    - **Preview raw data:** Understand how the dataset is structured.
-    - **View descriptive statistics:** Get a quick summary of the data distributions and ranges.
-    - **Check for missing values:** Identify data quality issues early on.
+    - **Preview raw data** :mag: 
+    - **View descriptive statistics** :bar_chart:
+    - **Check for missing values** :grey_question:
     
-    This initial look at the data helps us recognize potential issues, such as missing values or outliers, 
-    and sets a foundation for further preprocessing steps.
+    This initial overview helps ensure we understand the data structure, identify potential quality issues, 
+    and set the stage for further preprocessing. :seedling:
     """)
 
     if st.session_state['data'] is not None:
         data = st.session_state['data']
         
         # Data preview section
-        st.header("Data Preview")
+        st.header("Data Preview :eyes:")
         st.write("""
-        Preview the dataset to see how it's organized. Adjust the slider to view 
-        different numbers of rows. Observing the raw dataset helps in understanding 
-        the type of data (categorical, numerical, date/time) and potential data quality issues.
+        Get a quick look at the dataset structure. Adjust the slider to view more or fewer rows. 
+        Understanding the raw data layout is the first step toward making informed decisions in the analysis process.
         """)
         num_rows = st.slider("Select Number of Rows to Preview", 1, 100, 10)
         st.dataframe(data.head(num_rows))
 
         # Descriptive statistics section
-        st.header("Descriptive Statistics")
+        st.header("Descriptive Statistics :clipboard:")
         st.write("""
-        These statistics provide a quick snapshot of the dataset, including mean, median, min/max, 
-        and quartiles. Descriptive statistics help identify the scale of variables, detect anomalies, 
-        and guide decisions on data transformations.
+        These statistics provide insights into the central tendencies (mean, median) and spread (standard deviation) 
+        of numerical features. This helps identify any anomalies or unexpected ranges in the data.
         """)
         show_desc_table = st.checkbox("Show Descriptive Statistics Table")
         if show_desc_table:
             st.write(data.describe().T)
 
         # Missing values section
-        st.header("Missing Values Analysis")
+        st.header("Missing Values Analysis :question:")
         st.write("""
-        Missing values can bias the results or weaken the model’s predictive power. Understanding 
-        which columns have missing data and how much of it is missing enables us to plan appropriate 
-        strategies (imputation, dropping columns, etc.) in subsequent steps.
+        Missing values can affect data quality and model performance. Understanding which columns have missing values 
+        and how many is critical for data cleaning and imputation strategies.
         """)
         show_missing_table = st.checkbox("Show Missing Values Table")
         if show_missing_table:
@@ -87,39 +85,36 @@ def data_loading():
     else:
         st.error("Error: Data could not be loaded. Please check the data source.")
 
+
 # -------------------------------------
 # Page 2: Data Preprocessing
 # -------------------------------------
 def data_preprocessing():
-    st.title("Data Preprocessing")
-    
+    st.title("Data Preprocessing :broom:")
+
     st.markdown("""
-    **Goal:** Transform the raw dataset into a cleaner, more useful form.  
-    By preprocessing the data, we improve its quality and relevance. This step ensures that 
-    subsequent analyses and models are built on a solid foundation.
+    **Goal:** Transform the raw dataset into a cleaner, more useful form. :sparkles:
     
     On this page, you can:
-    - **Handle missing data:** Impute missing values using mean, median, or mode.
-    - **Drop irrelevant columns:** Remove columns that may not contribute to analysis.
-    - **Explore data distributions:** Identify skewness or outliers that might influence models.
-    - **Feature engineering:** Add new columns (e.g., date/time features, seasonal indicators, 
-      or an AQI column) to enhance the dataset’s value.
+    - **Handle missing values** :umbrella:
+    - **Remove irrelevant columns** :wastebasket:
+    - **Explore data distributions** :bar_chart:
+    - **Create new features** :hammer_and_wrench:
     
     Proper preprocessing ensures that the final dataset is well-prepared for visualization, 
-    correlation analysis, and modeling.
+    correlation analysis, and modeling. Let's set the stage for robust analysis and reliable insights! :rocket:
     """)
 
     if st.session_state['data'] is not None:
-        # Work on a copy so changes persist across the session
         data = st.session_state['data'].copy()
 
         # Handling Missing Values
-        st.header("Handling Missing Values")
+        st.header("Handling Missing Values :umbrella:")
         st.write("""
-        Choose a method to fill in missing values. The choice depends on the type and distribution of data:
-        - **Mean:** Useful for approximately symmetric distributions.
-        - **Median:** More robust to outliers and skewed distributions.
-        - **Mode:** Suitable for categorical data or data with repeating values.
+        Choose a method to address missing values:
+        - **Mean:** :balance_scale: Ideal for approximately normal distributions.
+        - **Median:** :scales: Useful for skewed distributions.
+        - **Mode:** :repeat: Good for categorical or frequently repeating values.
         """)
         imputation_method = st.radio("Choose an imputation method:", ["Mean", "Median", "Mode"])
         columns_to_impute = st.multiselect("Select columns to impute:", data.columns)
@@ -133,26 +128,25 @@ def data_preprocessing():
                 elif imputation_method == "Mode":
                     data[column].fillna(data[column].mode()[0], inplace=True)
             st.success("Missing values imputed successfully.")
-            st.session_state['data'] = data  # Update session state data after imputation
+            st.session_state['data'] = data
 
         # Dropping Columns
-        st.header("Dropping Columns")
+        st.header("Dropping Columns :wastebasket:")
         st.write("""
-        Removing irrelevant or redundant columns simplifies the dataset and can improve model 
-        performance by reducing noise. Select columns that do not add value to the analysis.
+        Remove columns that are irrelevant or redundant. Streamlining the dataset can improve 
+        performance and clarity, making subsequent analysis more focused.
         """)
         columns_to_drop = st.multiselect("Select columns to drop:", data.columns)
         if st.button("Drop Selected Columns"):
             data.drop(columns=columns_to_drop, inplace=True)
             st.success("Selected columns dropped successfully.")
-            st.session_state['data'] = data  # Update session state after dropping columns
+            st.session_state['data'] = data
 
         # Data Distribution Exploration
-        st.header("Distribution Exploration")
+        st.header("Distribution Exploration :bar_chart:")
         st.write("""
-        Visualizing distributions can reveal insights about the data's shape, spread, and 
-        presence of outliers. This informs the choice of imputation methods, transformations, 
-        and modeling approaches.
+        Visualizing the distribution of features can reveal skewness, outliers, or unexpected patterns. 
+        This helps guide decisions on transformations and better informs imputation methods.
         """)
         selected_columns = st.multiselect(
             "Select columns to display histograms",
@@ -170,14 +164,13 @@ def data_preprocessing():
             st.pyplot(fig)
 
         # Feature Engineering
-        st.header("Feature Engineering")
+        st.header("Feature Engineering :hammer_and_wrench:")
         st.write("""
-        By deriving new features from existing data, we can highlight important patterns and 
-        improve model performance. Consider adding:
-        - A **Date** column to analyze temporal trends.
-        - A **Season** column to capture seasonal variations.
-        - An **AQI** (Air Quality Index) column to simplify pollutant measurements into a single index.
-        - An **AQI_Bucket** column to classify AQI levels into categories like 'Good' or 'Unhealthy'.
+        Derive new features to enrich the dataset:
+        - **Date column** :calendar: For temporal analysis.
+        - **Season column** :four_leaf_clover: To capture seasonal patterns.
+        - **AQI column** :cloud: To aggregate pollutant levels into a single air quality index.
+        - **AQI_Bucket** :green_heart: To categorize AQI into qualitative groups (Good, Moderate, etc.).
         """)
 
         # Add Date Column
@@ -250,46 +243,45 @@ def data_preprocessing():
             st.session_state['data'] = data
 
         # Show processed data
-        st.header("View Processed Data")
+        st.header("View Processed Data :eyes:")
         st.write("""
-        After applying all preprocessing steps, you can take a final look at the dataset. 
-        Confirm that the imputation, column drops, and feature engineering steps have produced 
-        the desired transformations.
+        After applying all preprocessing steps, review your dataset to ensure changes were applied as intended. 
+        Confirm that imputation, column removal, and new feature creation have enhanced the dataset's quality and usability.
         """)
         if st.button("Show Processed Data"):
             st.dataframe(data)
     else:
         st.error("Data could not be loaded.")
 
+
 # -------------------------------------
 # Page 3: Data Visualization
 # -------------------------------------
 def data_visualization():
-    st.title("Data Visualization")
-    
+    st.title("Data Visualization :art:")
+
     st.markdown("""
-    **Goal:** Gain insights into data patterns and relationships through visual exploration.
+    **Goal:** Gain insights into data patterns and relationships through visual exploration. :crystal_ball:
     
     On this page, you can:
-    - Examine pollution levels across various stations to identify hotspots.
-    - Compare different pollutant averages to understand their relative significance.
-    - Investigate the distribution of AQI categories.
-    - Explore correlations between pollutants and weather parameters.
-    - Visualize multivariate relationships using parallel coordinates.
+    - **Examine pollution levels across stations** :cityscape:
+    - **Compare pollutant averages** :bar_chart:
+    - **Explore AQI distribution** :rainbow:
+    - **Analyze correlations between variables** :link:
+    - **Visualize multi-dimensional relationships** :dna:
     
-    Interactive and intuitive charts help highlight trends, seasonal effects, 
-    and correlations that might be less obvious in raw data tables.
+    Interactive charts make it easier to spot trends, seasonal effects, and correlations 
+    that might not be clear from raw data tables. :sparkles:
     """)
 
     if st.session_state['data'] is not None:
         data = st.session_state['data']
 
         # Average Pollution Levels by Station
-        if st.checkbox("Show Average Pollution Levels by Station"):
+        if st.checkbox("Show Average Pollution Levels by Station :cityscape:"):
             st.write("""
-            View how different stations vary in terms of average pollution levels. 
-            Identifying stations with consistently higher pollutant concentrations 
-            can guide targeted policy interventions.
+            Discover which stations report higher pollutant concentrations on average. 
+            Identifying pollution hotspots can inform targeted policy interventions and resource allocation.
             """)
             station_stats = data.groupby('station')[['PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3']].mean().reset_index()
             station_stats_melted = pd.melt(
@@ -310,11 +302,10 @@ def data_visualization():
             st.plotly_chart(fig)
 
         # Average Concentration of Each Pollutant
-        if st.checkbox("Show Average Concentration of Each Pollutant"):
+        if st.checkbox("Show Average Concentration of Each Pollutant :thermometer:"):
             st.write("""
-            Compare the average levels of each pollutant to identify which contaminants 
-            are most prevalent. This helps prioritize which pollutants to focus on 
-            for targeted improvements.
+            Compare the average levels of each pollutant across the entire dataset. 
+            Identifying the dominant pollutants can guide which factors to address first.
             """)
             pollutants = ['PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3']
             mean_pollutants = data[pollutants].mean()
@@ -327,11 +318,11 @@ def data_visualization():
             st.plotly_chart(fig)
 
         # AQI Distribution
-        if st.checkbox("Show AQI Distribution"):
+        if st.checkbox("Show AQI Distribution :cloud:"):
             st.write("""
-            Examine how frequently the air quality falls into different AQI categories. 
-            Understanding the distribution of AQI levels helps gauge overall air quality 
-            conditions and frequency of poor air quality events.
+            Examine how often the air quality falls into each AQI category. 
+            Understanding the prevalence of 'Unhealthy' or 'Hazardous' conditions 
+            can motivate policy changes or health advisories.
             """)
             fig = px.histogram(
                 data,
@@ -343,12 +334,11 @@ def data_visualization():
             st.plotly_chart(fig)
 
         # Correlation Matrix Heatmap
-        if st.checkbox("Show Correlation Matrix Heatmap"):
+        if st.checkbox("Show Correlation Matrix Heatmap :link:"):
             st.write("""
-            A correlation matrix reveals how closely different variables move together. 
-            Strong correlations may indicate redundant variables or potential predictors 
-            for modeling. Weather variables correlated with pollutants can help 
-            understand environmental factors influencing air quality.
+            A correlation matrix reveals relationships between variables. 
+            Strong correlations can indicate predictive power or redundancy, 
+            guiding feature selection and dimensionality reduction.
             """)
             corr_cols = ['TEMP', 'PRES', 'DEWP', 'RAIN', 'WSPM', 'PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3', 'AQI']
             corr_matrix = data[corr_cols].corr()
@@ -365,12 +355,11 @@ def data_visualization():
             st.plotly_chart(fig)
 
         # Parallel Coordinates Plot
-        if st.checkbox("Show Parallel Coordinates Plot of Weather and AQI"):
+        if st.checkbox("Show Parallel Coordinates Plot of Weather and AQI :dna:"):
             st.write("""
-            Parallel coordinates allow you to visualize multi-dimensional relationships 
-            in a single chart. Here, you can see how various weather factors and AQI 
-            levels interact. Color-coding by AQI category makes it easier to compare 
-            patterns between different air quality levels.
+            Parallel coordinates let you visualize high-dimensional relationships on a single chart. 
+            Observe how weather conditions align with AQI levels, providing insights into 
+            the environmental drivers of poor air quality.
             """)
             AQI_Bucket_mapping = {
                 'Good': 1,
@@ -398,37 +387,38 @@ def data_visualization():
     else:
         st.error("Data could not be loaded.")
 
+
 # -------------------------------------
 # Page 4: Data Modeling and Evaluation
 # -------------------------------------
 def data_modeling():
-    st.title("Data Modeling and Evaluation")
-    
+    st.title("Data Modeling and Evaluation :robot_face:")
+
     st.markdown("""
-    **Goal:** Leverage the cleaned and explored dataset to build predictive models.
+    **Goal:** Use the cleaned and explored dataset to build predictive models. :crystal_ball:
     
     On this page, you can:
-    - **Select Features:** Choose independent variables (X) and a target variable (y).
-    - **Apply Standardization:** Ensure all features contribute equally to model training.
-    - **Split the Data:** Create training and testing subsets to evaluate model generalization.
-    - **Train and Compare Models:** Try different algorithms like Linear Regression for 
-      baseline understanding and K-Nearest Neighbors for non-linear patterns.
-    - **Evaluate Performance:** Use metrics such as MSE, RMSE, R², MAE to judge model accuracy.
-    - **Hyperparameter Tuning:** Use Grid Search CV to optimize model parameters for better performance.
+    - **Select Features and Target** :dart:
+    - **Apply Standardization** :balance_scale:
+    - **Train-Test Split** :scissors:
+    - **Train Models (Linear Regression, KNN)** :chart_with_upwards_trend:
+    - **Evaluate Performance** :checkered_flag:
+    - **Hyperparameter Tuning** :game_die:
     
-    By understanding model performance and tuning parameters, we can improve predictions 
-    and gain deeper insights into the factors driving air quality.
+    By building and comparing models, we learn how well various factors predict air quality. 
+    Tuning parameters helps maximize model performance, giving more accurate insights 
+    into the underlying dynamics. :rocket:
     """)
 
     if st.session_state['data'] is not None:
         data = st.session_state['data']
 
         # Feature Selection
-        st.header("Feature Selection")
+        st.header("Feature Selection :dart:")
         st.write("""
-        Choose which variables to use as features (X) and which variable to predict (y). 
-        Consider using the visualization insights and correlation findings to pick 
-        informative variables.
+        Choose which variables to include as features (X) and which variable to predict (y).
+        Drawing on previous insights, select the most relevant, non-redundant features 
+        to improve model accuracy and interpretability.
         """)
         independent_vars = st.multiselect("Select Independent Variables:", options=data.columns)
         dependent_var = st.selectbox("Select Dependent Variable:", options=data.columns)
@@ -438,11 +428,10 @@ def data_modeling():
             y = data[dependent_var]
 
             # Data Standardization
-            st.header("Data Standardization")
+            st.header("Data Standardization :balance_scale:")
             st.write("""
-            Standardization transforms features to have zero mean and unit variance. 
-            This can help models that are sensitive to feature scales (like KNN) 
-            perform more consistently.
+            Standardizing features can improve model performance, especially for algorithms 
+            sensitive to feature scales. Apply standardization to ensure equal emphasis on all features.
             """)
             standardize = st.checkbox("Standardize Data using StandardScaler")
 
@@ -451,10 +440,10 @@ def data_modeling():
                 X = scaler.fit_transform(X)
 
             # Train-Test Split
-            st.header("Train-Test Split")
+            st.header("Train-Test Split :scissors:")
             st.write("""
-            Splitting the dataset into training and testing sets ensures we can evaluate 
-            the model’s ability to generalize to unseen data. Choose the test size below.
+            Splitting data into training and test sets allows unbiased evaluation of model performance 
+            on unseen data, ensuring better generalization and reliability in predictions.
             """)
             test_size = st.slider("Select Test Size (as a percentage):", min_value=10, max_value=50, value=20, step=5)
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
@@ -463,15 +452,14 @@ def data_modeling():
             st.write(f"Testing Set Size: {len(X_test)} rows")
 
             # Model Selection and Evaluation
-            st.header("Model Selection and Evaluation")
+            st.header("Model Selection and Evaluation :chart_with_upwards_trend:")
             st.write("""
-            Choose from different models and evaluate their performance:
-            - **Linear Regression:** Provides a simple baseline and interpretable coefficients.
-            - **K-Nearest Neighbors:** Captures non-linear patterns. Adjust k and weight parameters.
+            Evaluate different models using metrics like MSE, RMSE, R², and MAE. 
+            Compare performance to select the best approach or understand how factors drive predictions.
             """)
 
             # Linear Regression
-            if st.checkbox("Linear Regression"):
+            if st.checkbox("Linear Regression :straight_ruler:"):
                 model_lr = LinearRegression()
                 model_lr.fit(X_train, y_train)
                 y_pred_lr = model_lr.predict(X_test)
@@ -482,16 +470,16 @@ def data_modeling():
                 mae_lr = mean_absolute_error(y_test, y_pred_lr)
 
                 st.write("### Linear Regression Results")
-                st.write(f"**Mean Squared Error (MSE):** {mse_lr}")
-                st.write(f"**Root Mean Squared Error (RMSE):** {rmse_lr}")
-                st.write(f"**R-squared (R²):** {r2_lr}")
-                st.write(f"**Mean Absolute Error (MAE):** {mae_lr}")
+                st.write(f"**MSE:** {mse_lr}")
+                st.write(f"**RMSE:** {rmse_lr}")
+                st.write(f"**R²:** {r2_lr}")
+                st.write(f"**MAE:** {mae_lr}")
 
             # K-Nearest Neighbors
-            if st.checkbox("K-Nearest Neighbors"):
+            if st.checkbox("K-Nearest Neighbors :woman_running:"):
                 st.write("""
-                Adjust the number of neighbors (k) and select how distances affect predictions 
-                (uniform or distance-weighted) to find the best setup.
+                Tune 'k' and choose how to weight neighbors. 
+                KNN can capture complex patterns if the right parameters are found.
                 """)
                 k_value = st.slider("Select K Value:", min_value=1, max_value=20, value=5, step=1)
                 weights_option = st.selectbox("Select Weight Option:", options=["uniform", "distance"])
@@ -505,17 +493,17 @@ def data_modeling():
                 mae_knn = mean_absolute_error(y_test, y_pred_knn)
 
                 st.write("### K-Nearest Neighbors Results")
-                st.write(f"**Mean Squared Error (MSE):** {mse_knn}")
-                st.write(f"**Root Mean Squared Error (RMSE):** {rmse_knn}")
-                st.write(f"**R-squared (R²):** {r2_knn}")
-                st.write(f"**Mean Absolute Error (MAE):** {mae_knn}")
+                st.write(f"**MSE:** {mse_knn}")
+                st.write(f"**RMSE:** {rmse_knn}")
+                st.write(f"**R²:** {r2_knn}")
+                st.write(f"**MAE:** {mae_knn}")
 
                 # Grid Search for KNN
-                if st.checkbox("Perform Grid Search for KNN"):
+                if st.checkbox("Perform Grid Search for KNN :game_die:"):
                     st.write("""
-                    Grid Search tests various parameter combinations automatically, 
-                    helping find the best values for k and weights. This can improve 
-                    model performance significantly.
+                    Grid search automates testing of multiple parameter combinations, 
+                    helping you find the best settings for KNN. This process can improve 
+                    model accuracy and robustness.
                     """)
                     param_grid = {
                         'n_neighbors': range(1, 21),
@@ -531,24 +519,24 @@ def data_modeling():
     else:
         st.error("Data could not be loaded.")
 
+
 # -------------------------------------
 # Sidebar Navigation
 # -------------------------------------
-st.sidebar.title("Navigation")
+st.sidebar.title("Navigation :compass:")
 page = st.sidebar.radio("Go to", ["Data Loading", "Data Preprocessing", "Data Visualization", "Data Modeling and Evaluation"])
 
-# Additional sidebar info
 st.sidebar.markdown("""
 ---
-### About This App
+### About This App :information_source:
 
 This application provides an end-to-end analysis pipeline for Beijing's air quality data:
-1. **Data Loading:** Get an overview of the raw dataset.
-2. **Data Preprocessing:** Clean and enhance data to improve analysis quality.
-3. **Data Visualization:** Uncover patterns and insights through interactive charts.
-4. **Data Modeling and Evaluation:** Build and assess predictive models to understand what influences air quality.
+1. **Data Loading:** :open_file_folder: Get an overview of the raw dataset.
+2. **Data Preprocessing:** :broom: Clean and enhance the data for better quality.
+3. **Data Visualization:** :art: Uncover patterns and insights through interactive charts.
+4. **Data Modeling and Evaluation:** :robot_face: Build and assess predictive models.
 
-Use the navigation above to explore each stage of the analysis.
+Use the navigation above to explore each stage of the analysis. Enjoy discovering insights! :sparkles:
 """)
 
 # Page navigation logic
