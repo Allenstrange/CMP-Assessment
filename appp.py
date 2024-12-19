@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
-import plotly.io as pio
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
@@ -14,10 +13,10 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.model_selection import GridSearchCV
 
 # Configure the page
-st.set_page_config(page_title="Multi-Page Streamlit App", page_icon=":bar_chart:")
+st.set_page_config(page_title="Enhanced Streamlit App", page_icon=":bar_chart:", layout="wide")
 
-# Load the dataset locally
-@st.cache_data  # 🗂️ Cache the dataset to improve app performance
+# Load the dataset
+@st.cache_data
 def load_data():
     url = "https://raw.githubusercontent.com/Allenstrange/CMP-Assessment/refs/heads/main/Air_Quality_Beijing.csv"
     return pd.read_csv(url)
@@ -26,61 +25,64 @@ def load_data():
 if 'data' not in st.session_state:
     st.session_state['data'] = load_data()
 
-# 📄 Overview Section
-st.sidebar.title("Dataset Overview")
-st.sidebar.write(
-    "### Air Quality in Beijing 🌫️\n"
-    "This dataset captures air quality measurements in Beijing, including various pollutants and weather conditions.\n"
-    "The goal is to analyze pollution levels and their relationship with weather patterns to derive actionable insights."
-)
+# Function to reset data to original
+if 'original_data' not in st.session_state:
+    st.session_state['original_data'] = st.session_state['data'].copy()
 
-# Page 1: Data Loading
-# 🛠️ Load and preview the dataset
+def reset_data():
+    st.session_state['data'] = st.session_state['original_data'].copy()
+    st.success("Data reset to original state.")
 
+# Sidebar Navigation
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", ["Data Loading", "Data Preprocessing", "Data Visualization", "Data Modeling and Evaluation"])
+
+if st.sidebar.button("Reset Data"):
+    reset_data()
+
+# Data Loading Page
 def data_loading():
     st.title("Data Loading 🛠️")
 
     if st.session_state['data'] is not None:
         data = st.session_state['data']
 
-        # Data preview
+        # Dataset Metadata
+        st.write("### Dataset Metadata")
+        st.write(f"**Number of Rows:** {data.shape[0]}")
+        st.write(f"**Number of Columns:** {data.shape[1]}")
+        st.write("**Column Data Types:**")
+        st.dataframe(data.dtypes, use_container_width=True)
+
+        # Data Preview
         num_rows = st.slider("Select Number of Rows to Preview", 1, 100, 10)
-        st.write("### Data Preview 🔍:")
-        st.write("This is a dataset about pollutants:")
+        st.write("### Data Preview 🔍")
         st.dataframe(data.head(num_rows))
 
         # Descriptive Statistics Options
-        st.write("### Descriptive Statistics 📊:")
-        show_desc_table = st.checkbox("Show Descriptive Statistics Table")
-        if show_desc_table:
+        st.write("### Descriptive Statistics 📊")
+        if st.checkbox("Show Descriptive Statistics Table"):
             st.write(data.describe().T)
 
-        # Missing Value Statistics Options
-        st.write("### Missing Values ❓:")
-        show_missing_table = st.checkbox("Show Missing Values Table")
-        if show_missing_table:
-            # Calculate missing values and percentages
-            missing_values = data.isnull().sum()
-            missing_percentage = (data.isnull().sum() / len(data)) * 100
-            # Create a DataFrame for display
-            missing_df = pd.DataFrame({'Missing Values': missing_values, 'Percentage': missing_percentage})
-            st.table(missing_df)  # Display as a table
+        # Missing Value Visualization
+        st.write("### Missing Values ❓")
+        if st.checkbox("Visualize Missing Values"):
+            missing_df = data.isnull().sum().reset_index()
+            missing_df.columns = ['Column', 'Missing Values']
+            missing_df['Percentage'] = (missing_df['Missing Values'] / data.shape[0]) * 100
+            fig = px.bar(missing_df, x='Column', y='Percentage', title='Percentage of Missing Values')
+            st.plotly_chart(fig)
 
-    else:
-        st.write("Data could not be loaded.")
-
-# Page 2: Data Preprocessing
-# 🧹 Clean and preprocess the data
-
+# Data Preprocessing Page
 def data_preprocessing():
     st.title("Data Preprocessing 🧹")
 
     if st.session_state['data'] is not None:
         data = st.session_state['data']
 
-        # Section 1: Handling Missing Values
+        # Handle Missing Values
         st.header("Handling Missing Values ❓")
-        imputation_method = st.radio("Choose an imputation method:", ["Mean", "Median", "Mode"])
+        imputation_method = st.radio("Choose an imputation method:", ["Mean", "Median", "Mode"], index=0)
         columns_to_impute = st.multiselect("Select columns to impute:", data.columns)
 
         if st.button("Impute Missing Values"):
@@ -93,7 +95,7 @@ def data_preprocessing():
                     data[column].fillna(data[column].mode()[0], inplace=True)
             st.success("Missing values imputed successfully.")
 
-        # Section 2: Dropping Columns
+        # Drop Columns
         st.header("Dropping Columns 🗑️")
         columns_to_drop = st.multiselect("Select columns to drop:", data.columns)
 
@@ -101,29 +103,7 @@ def data_preprocessing():
             data.drop(columns=columns_to_drop, inplace=True)
             st.success("Selected columns dropped successfully.")
 
-        # Data Exploration: Pollutant and Weather Distributions
-        st.write("### Data Exploration 📈")
-        st.write(
-            "This data exploration aims to analyze feature distributions and identify skewness to inform the imputation of missing values."
-        )
-
-        # Select columns for histograms
-        selected_columns = st.multiselect(
-            "Select columns to display histograms",
-            data.columns,
-            default=['PM2.5', 'PM10', 'TEMP', 'PRES']  # Default to some columns
-        )
-
-        if selected_columns:
-            fig, axes = plt.subplots(len(selected_columns), 1, figsize=(10, 5 * len(selected_columns)))
-            if len(selected_columns) == 1:
-                axes = [axes]
-            for ax, col in zip(axes, selected_columns):
-                data[col].hist(ax=ax, bins=30)
-                ax.set_title(f"Distribution of {col}")
-            st.pyplot(fig)
-
-        # Feature Engineering Section
+        # Feature Engineering
         st.header("Feature Engineering 🛠️")
         if st.checkbox("Add Date Column"):
             data['Date'] = pd.to_datetime(data[['year', 'month', 'day', 'hour']])
@@ -182,17 +162,11 @@ def data_preprocessing():
             data['AQI_Bucket'] = data['AQI'].apply(get_aqi_bucket)
             st.success("AQI_Bucket column added successfully.")
 
-        # Processed Data Section
         st.header("Processed Data 📑")
         if st.button("Show Processed Data"):
             st.dataframe(data)
 
-    else:
-        st.write("Data could not be loaded.")
-
-# Page 3: Data Visualization
-# 📊 Visualize the processed data
-
+# Data Visualization Page
 def data_visualization():
     st.title("Data Visualization 📊")
 
@@ -201,67 +175,29 @@ def data_visualization():
 
         st.write("### Visualizations 🖼️")
 
-        # Visualization 1: Stacked Bar Chart of Average Pollution Levels by Station
+        # Average Pollution Levels by Station
         if st.checkbox("Show Average Pollution Levels by Station"):
             station_stats = data.groupby('station')[['PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3']].mean().reset_index()
             station_stats_melted = pd.melt(station_stats, id_vars=['station'], value_vars=['PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3'], var_name='Pollutant', value_name='Average Concentration')
             fig = px.bar(station_stats_melted, x='station', y='Average Concentration', color='Pollutant', barmode='stack', title='Average Pollution Levels by Station')
             st.plotly_chart(fig)
 
-        # Visualization 2: Bar Chart of Average Concentration of Each Pollutant
-        if st.checkbox("Show Average Concentration of Each Pollutant"):
-            pollutants = ['PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3']
-            mean_pollutants = data[pollutants].mean()
-            fig = px.bar(x=pollutants, y=mean_pollutants, title='Average Concentration of Each Pollutant', labels={'x': 'Pollutant', 'y': 'Average Concentration'})
-            st.plotly_chart(fig)
-
-        # Visualization 3: Histogram of AQI Distribution
-        if st.checkbox("Show AQI Distribution"):
-            fig = px.histogram(data, x='AQI_Bucket', nbins=30, title='AQI Distribution', marginal='box')
-            st.plotly_chart(fig)
-
-        # Visualization 4: Heatmap of Correlation Matrix
+        # Correlation Matrix Heatmap
         if st.checkbox("Show Correlation Matrix Heatmap"):
-            corr_cols = ['TEMP', 'PRES', 'DEWP', 'RAIN', 'WSPM', 'PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3', 'AQI']
+            corr_cols = ['TEMP', 'PRES', 'DEWP', 'RAIN', 'WSPM', 'PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3']
             corr_matrix = data[corr_cols].corr()
-            text_annotations = np.around(corr_matrix.values, decimals=2)
-            fig = go.Figure(data=go.Heatmap(z=corr_matrix.values, x=corr_cols, y=corr_cols, colorscale='Viridis', text=text_annotations, texttemplate="%{text}"))
-            fig.update_layout(title='Correlation Matrix of Weather Conditions and Pollutants/AQI')
-            st.plotly_chart(fig)
+            fig, ax = plt.subplots(figsize=(10, 8))
+            sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f", ax=ax)
+            st.pyplot(fig)
 
-        # Visualization 5: Parallel Coordinates Plot of Weather and AQI
-        if st.checkbox("Show Parallel Coordinates Plot of Weather and AQI"):
-            AQI_Bucket_mapping = {'Good': 1, 'Moderate': 2, 'Unhealthy for Sensitive Groups': 3, 'Unhealthy': 4, 'Very Unhealthy': 5, 'Hazardous': 6}
-            data['AQI_Bucket_Num'] = data['AQI_Bucket'].map(AQI_Bucket_mapping)
-            fig = px.parallel_coordinates(data, dimensions=['TEMP', 'PRES', 'DEWP', 'RAIN', 'WSPM', 'AQI'], color='AQI_Bucket_Num', color_continuous_scale=px.colors.diverging.Tealrose, title='Parallel Coordinates Plot of Weather and AQI')
-            fig.update_layout(coloraxis_colorbar=dict(tickvals=list(AQI_Bucket_mapping.values()), ticktext=list(AQI_Bucket_mapping.keys())))
-            st.plotly_chart(fig)
-
-    else:
-        st.write("Data could not be loaded.")
-
-# Page 4: Data Modeling
-# 🤖 Build predictive models
-
+# Data Modeling and Evaluation Page
 def data_modeling():
     st.title("Data Modeling and Evaluation 🤖")
 
     if st.session_state['data'] is not None:
         data = st.session_state['data']
 
-        # Feature Selection Section
         st.header("Feature Selection 🔬")
-        st.write("Select dependent and independent variables for modeling.")
-
-        # Correlation Heatmap
-        if st.checkbox("Show Correlation Heatmap"):
-            corr_cols = data.select_dtypes(include=[np.number]).columns
-            corr_matrix = data[corr_cols].corr()
-            fig, ax = plt.subplots(figsize=(10, 8))
-            sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f", ax=ax)
-            st.pyplot(fig)
-
-        # Select Dependent and Independent Variables
         independent_vars = st.multiselect("Select Independent Variables:", options=data.columns)
         dependent_var = st.selectbox("Select Dependent Variable:", options=data.columns)
 
@@ -269,7 +205,7 @@ def data_modeling():
             X = data[independent_vars]
             y = data[dependent_var]
 
-            # Standardization Option
+            # Standardization
             st.header("Data Standardization ⚖️")
             standardize = st.checkbox("Standardize Data using StandardScaler")
 
@@ -279,33 +215,23 @@ def data_modeling():
 
             # Train-Test Split
             st.header("Train-Test Split ✂️")
-            test_size = st.slider("Select Test Size (as a percentage):", min_value=10, max_value=50, value=20, step=5)
+            test_size = st.slider("Select Test Size (as a percentage):", 10, 50, 20, 5)
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
 
             st.write("Training Set Size:", len(X_train))
             st.write("Testing Set Size:", len(X_test))
 
-            # Model Selection Section
+            # Model Selection
             st.header("Model Selection 🛠️")
-
-            # Linear Regression
             if st.checkbox("Linear Regression"):
-                model_lr = LinearRegression()
-                model_lr.fit(X_train, y_train)
-                y_pred_lr = model_lr.predict(X_test)
-
-                mse_lr = mean_squared_error(y_test, y_pred_lr)
-                rmse_lr = np.sqrt(mse_lr)
-                r2_lr = r2_score(y_test, y_pred_lr)
-                mae_lr = mean_absolute_error(y_test, y_pred_lr)
+                model = LinearRegression()
+                model.fit(X_train, y_train)
+                y_pred = model.predict(X_test)
 
                 st.write("### Linear Regression Results")
-                st.write(f"Mean Squared Error: {mse_lr}")
-                st.write(f"Root Mean Squared Error: {rmse_lr}")
-                st.write(f"R-squared: {r2_lr}")
-                st.write(f"Mean Absolute Error: {mae_lr}")
+                st.write(f"Mean Squared Error: {mean_squared_error(y_test, y_pred):.2f}")
+                st.write(f"R-squared: {r2_score(y_test, y_pred):.2f}")
 
-            # K-Nearest Neighbors
             if st.checkbox("K-Nearest Neighbors"):
                 k_value = st.slider("Select K Value:", min_value=1, max_value=20, value=5, step=1)
                 weights_option = st.selectbox("Select Weight Option:", options=["uniform", "distance"])
@@ -313,37 +239,11 @@ def data_modeling():
                 model_knn.fit(X_train, y_train)
                 y_pred_knn = model_knn.predict(X_test)
 
-                mse_knn = mean_squared_error(y_test, y_pred_knn)
-                rmse_knn = np.sqrt(mse_knn)
-                r2_knn = r2_score(y_test, y_pred_knn)
-                mae_knn = mean_absolute_error(y_test, y_pred_knn)
-
                 st.write("### K-Nearest Neighbors Results")
-                st.write(f"Mean Squared Error: {mse_knn}")
-                st.write(f"Root Mean Squared Error: {rmse_knn}")
-                st.write(f"R-squared: {r2_knn}")
-                st.write(f"Mean Absolute Error: {mae_knn}")
+                st.write(f"Mean Squared Error: {mean_squared_error(y_test, y_pred_knn):.2f}")
+                st.write(f"R-squared: {r2_score(y_test, y_pred_knn):.2f}")
 
-                # Grid Search for Hyperparameter Tuning
-                if st.checkbox("Perform Grid Search for KNN"):
-                    param_grid = {
-                        'n_neighbors': range(1, 21),
-                        'weights': ['uniform', 'distance']
-                    }
-                    grid_search = GridSearchCV(KNeighborsRegressor(), param_grid, cv=5, scoring='neg_mean_squared_error')
-                    grid_search.fit(X_train, y_train)
-
-                    st.write("### Best Parameters from Grid Search:")
-                    st.write(grid_search.best_params_)
-                    st.write("Best Cross-Validated Score:", -grid_search.best_score_)
-
-    else:
-        st.write("Data could not be loaded.")
-
-# Sidebar Navigation
-st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Data Loading", "Data Preprocessing", "Data Visualization", "Data Modeling and Evaluation"])
-
+# Page Navigation
 if page == "Data Loading":
     data_loading()
 elif page == "Data Preprocessing":
@@ -352,4 +252,3 @@ elif page == "Data Visualization":
     data_visualization()
 elif page == "Data Modeling and Evaluation":
     data_modeling()
-
