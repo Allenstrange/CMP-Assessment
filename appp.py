@@ -518,7 +518,9 @@ def data_modeling():
                     grid_search.fit(X_train, y_train)
 
                     st.write("### Best Parameters from Grid Search")
-                    st.write(grid_search.best_params_)
+                    gridd = (grid_search.best_params_)
+                    st.write(gridd)
+                    
                     st.write(f"**Best Cross-Validated Score (MSE):** {-grid_search.best_score_}")
 
     else:
