@@ -512,7 +512,7 @@ def data_modeling():
                         'weights': ['uniform', 'distance']
                     }
 
-                    st.write("Selected K range:", list(param_grid['n_neighbors']))
+                    #st.write("Selected K range:", list(param_grid['n_neighbors']))
 
                     grid_search = GridSearchCV(KNeighborsRegressor(), param_grid, cv=5, scoring='neg_mean_squared_error')
                     grid_search.fit(X_train, y_train)
