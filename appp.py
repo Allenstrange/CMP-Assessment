@@ -14,7 +14,6 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 
-
 # Set the Streamlit page configuration
 st.set_page_config(page_title="Air Quality Analysis App", page_icon=":bar_chart:")
 
@@ -26,7 +25,6 @@ def load_data():
 # Load data into session state
 if 'data' not in st.session_state:
     st.session_state['data'] = load_data()
-
 
 # -------------------------------------
 # Page 1: Data Loading
@@ -72,7 +70,6 @@ def data_loading():
             st.table(missing_df)
     else:
         st.error("Error: Data could not be loaded. Please check the data source.")
-
 
 # -------------------------------------
 # Page 2: Data Preprocessing
@@ -206,9 +203,8 @@ def data_preprocessing():
     else:
         st.error("Data could not be loaded.")
 
-
 # -------------------------------------
-# Page 3: Data Visualization
+# Page 3: Data Visualization (Updated with Key Findings)
 # -------------------------------------
 def data_visualization():
     st.title("Data Visualization :art:")
@@ -232,53 +228,120 @@ def data_visualization():
         # Average Pollution Levels by Station
         if st.checkbox("Show Average Pollution Levels by Station :cityscape:"):
             station_stats = data.groupby('station')[['PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3']].mean().reset_index()
-            station_stats_melted = pd.melt(station_stats, id_vars=['station'], 
-                                           value_vars=['PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3'], 
-                                           var_name='Pollutant', value_name='Average Concentration')
-            fig = px.bar(station_stats_melted, x='station', y='Average Concentration', color='Pollutant', 
-                         barmode='stack', title='Average Pollution Levels by Station')
+            station_stats_melted = pd.melt(
+                station_stats,
+                id_vars=['station'],
+                value_vars=['PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3'],
+                var_name='Pollutant',
+                value_name='Average Concentration'
+            )
+            fig = px.bar(
+                station_stats_melted,
+                x='station',
+                y='Average Concentration',
+                color='Pollutant',
+                barmode='stack',
+                title='Average Pollution Levels by Station'
+            )
             st.plotly_chart(fig)
+
+            st.markdown("""
+            **Key Finding:** Some stations consistently show higher pollutant levels, indicating localized pollution sources 
+            or environmental conditions. This suggests that targeted interventions at specific locations could be more effective.
+            """)
 
         # Average Concentration of Each Pollutant
         if st.checkbox("Show Average Concentration of Each Pollutant :thermometer:"):
             pollutants = ['PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3']
             mean_pollutants = data[pollutants].mean()
-            fig = px.bar(x=pollutants, y=mean_pollutants, 
-                         title='Average Concentration of Each Pollutant', 
-                         labels={'x': 'Pollutant', 'y': 'Average Concentration'})
+            fig = px.bar(
+                x=pollutants,
+                y=mean_pollutants,
+                title='Average Concentration of Each Pollutant',
+                labels={'x': 'Pollutant', 'y': 'Average Concentration'}
+            )
             st.plotly_chart(fig)
+
+            st.markdown("""
+            **Key Finding:** Certain pollutants stand out with higher average concentrations. Identifying these primary pollutants 
+            can help focus mitigation efforts where they will have the greatest impact on overall air quality.
+            """)
 
         # AQI Distribution
         if st.checkbox("Show AQI Distribution :cloud:"):
-            fig = px.histogram(data, x='AQI_Bucket', nbins=30, title='AQI Distribution', marginal='box')
+            fig = px.histogram(
+                data,
+                x='AQI_Bucket',
+                nbins=30,
+                title='AQI Distribution',
+                marginal='box'
+            )
             st.plotly_chart(fig)
+
+            st.markdown("""
+            **Key Finding:** Most readings fall into 'Good' or 'Moderate' categories, indicating that severe pollution events 
+            are relatively infrequent. This suggests the region typically experiences mild to moderate pollution rather than persistent extremes.
+            """)
 
         # Correlation Matrix Heatmap
         if st.checkbox("Show Correlation Matrix Heatmap :link:"):
             corr_cols = ['TEMP', 'PRES', 'DEWP', 'RAIN', 'WSPM', 'PM2.5', 'PM10', 'SO2', 'NO2', 'CO', 'O3', 'AQI']
             corr_matrix = data[corr_cols].corr()
             text_annotations = np.around(corr_matrix.values, decimals=2)
-            fig = go.Figure(data=go.Heatmap(z=corr_matrix.values, x=corr_cols, y=corr_cols, colorscale='Viridis', 
-                                            text=text_annotations, texttemplate="%{text}"))
+            fig = go.Figure(data=go.Heatmap(
+                z=corr_matrix.values,
+                x=corr_cols,
+                y=corr_cols,
+                colorscale='Viridis',
+                text=text_annotations,
+                texttemplate="%{text}"
+            ))
             fig.update_layout(title='Correlation Matrix of Weather Conditions and Pollutants/AQI')
             st.plotly_chart(fig)
 
+            st.markdown("""
+            **Key Finding:** Certain pollutants are closely correlated with each other and with weather conditions. 
+            For instance, PM2.5 and PM10 often rise together, and weather factors like temperature or pressure may 
+            influence pollutant levels. Understanding these relationships helps target the root causes of pollution.
+            """)
+
         # Parallel Coordinates Plot
         if st.checkbox("Show Parallel Coordinates Plot of Weather and AQI :dna:"):
-            AQI_Bucket_mapping = {'Good': 1, 'Moderate': 2, 'Unhealthy for Sensitive Groups': 3, 'Unhealthy': 4, 'Very Unhealthy': 5, 'Hazardous': 6}
+            AQI_Bucket_mapping = {
+                'Good': 1,
+                'Moderate': 2,
+                'Unhealthy for Sensitive Groups': 3,
+                'Unhealthy': 4,
+                'Very Unhealthy': 5,
+                'Hazardous': 6
+            }
             data['AQI_Bucket_Num'] = data['AQI_Bucket'].map(AQI_Bucket_mapping)
-            fig = px.parallel_coordinates(data, dimensions=['TEMP', 'PRES', 'DEWP', 'RAIN', 'WSPM', 'AQI'], 
-                                          color='AQI_Bucket_Num', color_continuous_scale=px.colors.diverging.Tealrose, 
-                                          title='Parallel Coordinates Plot of Weather and AQI')
-            fig.update_layout(coloraxis_colorbar=dict(tickvals=list(AQI_Bucket_mapping.values()), 
-                                                      ticktext=list(AQI_Bucket_mapping.keys())))
+            fig = px.parallel_coordinates(
+                data,
+                dimensions=['TEMP', 'PRES', 'DEWP', 'RAIN', 'WSPM', 'AQI'],
+                color='AQI_Bucket_Num',
+                color_continuous_scale=px.colors.diverging.Tealrose,
+                title='Parallel Coordinates Plot of Weather and AQI'
+            )
+            fig.update_layout(
+                coloraxis_colorbar=dict(
+                    tickvals=list(AQI_Bucket_mapping.values()),
+                    ticktext=list(AQI_Bucket_mapping.keys())
+                )
+            )
             st.plotly_chart(fig)
+
+            st.markdown("""
+            **Key Finding:** Weather conditions and AQI levels are interconnected. Certain weather patterns are associated 
+            with better air quality, while others coincide with poorer AQI. This suggests a strategic focus on managing emissions 
+            under specific weather conditions could yield better results.
+            """)
+
     else:
         st.error("Data could not be loaded.")
 
-
 # -------------------------------------
-# Page 4: Data Modeling and Evaluation (Improved)
+# Page 4: Data Modeling and Evaluation
 # -------------------------------------
 def data_modeling():
     st.title("Data Modeling and Evaluation :robot_face:")
@@ -319,7 +382,7 @@ def data_modeling():
         scaler = StandardScaler()
         X = scaler.fit_transform(X)
     else:
-        X = X.values  # Ensure numeric array
+        X = X.values
 
     # Train-Test Split or Cross-Validation
     st.header("Train-Test or Cross-Validation Setup :scissors:")
@@ -472,7 +535,6 @@ def data_modeling():
         for idx, (name, m) in enumerate(st.session_state['saved_models']):
             st.write(f"{idx+1}. {name}")
         # Additional comparison logic can be implemented here if desired.
-
 
 # -------------------------------------
 # Sidebar Navigation
