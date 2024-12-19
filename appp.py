@@ -498,17 +498,23 @@ def data_modeling():
                 st.write(f"**R²:** {r2_knn}")
                 st.write(f"**MAE:** {mae_knn}")
 
-                # Grid Search for KNN
+                # Grid Search for Hyperparameter Tuning with user-defined K range
                 if st.checkbox("Perform Grid Search for KNN :game_die:"):
                     st.write("""
-                    Grid search automates testing of multiple parameter combinations, 
-                    helping you find the best settings for KNN. This process can improve 
-                    model accuracy and robustness.
+                    Adjust the range of `n_neighbors` to explore different K values during hyperparameter tuning. 
+                    Use the sliders below to select the start and end of the K range.
                     """)
+
+                    start_k = st.slider("Start of K range", 1, 10, 1)
+                    end_k = st.slider("End of K range", start_k + 1, 50, 20, help="Select an upper bound larger than the start.")
+
                     param_grid = {
-                        'n_neighbors': range(1, 21),
+                        'n_neighbors': range(start_k, end_k + 1),
                         'weights': ['uniform', 'distance']
                     }
+
+                    st.write("Selected K range:", list(param_grid['n_neighbors']))
+
                     grid_search = GridSearchCV(KNeighborsRegressor(), param_grid, cv=5, scoring='neg_mean_squared_error')
                     grid_search.fit(X_train, y_train)
 
