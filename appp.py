@@ -498,18 +498,17 @@ def data_modeling():
                 st.write(f"**R²:** {r2_knn}")
                 st.write(f"**MAE:** {mae_knn}")
 
-                # Grid Search for Hyperparameter Tuning with user-defined K range
+                # Grid Search for Hyperparameter Tuning with a single slider for max_k
                 if st.checkbox("Perform Grid Search for KNN :game_die:"):
                     st.write("""
-                    Adjust the range of `n_neighbors` to explore different K values during hyperparameter tuning. 
-                    Use the sliders below to select the start and end of the K range.
+                    Select the maximum `k` for `n_neighbors`. The search will include 
+                    all integer values starting from 1 up to your selected maximum.
                     """)
-
-                    start_k = st.slider("Start of K range", 1, 10, 1)
-                    end_k = st.slider("End of K range", start_k + 1, 50, 20, help="Select an upper bound larger than the start.")
+                    max_k = st.slider("Select Maximum K Value", min_value=2, max_value=50, value=20, 
+                                      help="The range will be from 1 to the selected maximum K.")
 
                     param_grid = {
-                        'n_neighbors': range(start_k, end_k + 1),
+                        'n_neighbors': range(1, max_k + 1),
                         'weights': ['uniform', 'distance']
                     }
 
